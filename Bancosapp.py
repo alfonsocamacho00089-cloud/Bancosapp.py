@@ -1,155 +1,55 @@
 import streamlit as st
 import requests
-import pandas as pd
 
-# 1. Configuración de la página
-st.set_page_config(page_title="Calculadora TuPropina", page_icon="💰")
+# Configuración visual
+st.set_page_config(page_title="Calculadora TuPropina", page_icon="🇻🇪")
 
 st.title("💰 Calculadora TuPropina")
-st.subheader("Tasas Oficiales BCV en tiempo real")
+st.write("Tasas oficiales actualizadas directamente del BCV.")
 
-# 2. Tu enlace RAW de GitHub (PEGA EL TUYO AQUÍ)
-URL_JSON = "[
-    {
-        "banco": "Banco Nacional de Cr\u00e9dito BNC",
-        "precio": "494.9658"
-    },
-    {
-        "banco": "BBVA Provincial",
-        "precio": "530.0000"
-    },
-    {
-        "banco": "Banco Activo",
-        "precio": "463.5795"
-    },
-    {
-        "banco": "Banco Mercantil",
-        "precio": "555.0000"
-    },
-    {
-        "banco": "Banesco",
-        "precio": "469.2704"
-    },
-    {
-        "banco": "Otras Instituciones",
-        "precio": "508.9179"
-    },
-    {
-        "banco": "Banco Nacional de Cr\u00e9dito BNC",
-        "precio": "498.9911"
-    },
-    {
-        "banco": "Bancamiga",
-        "precio": "524.8302"
-    },
-    {
-        "banco": "Banesco",
-        "precio": "469.1294"
-    },
-    {
-        "banco": "Banco Venezolano de Cr\u00e9dito",
-        "precio": "561.0000"
-    },
-    {
-        "banco": "BBVA Provincial",
-        "precio": "516.0646"
-    },
-    {
-        "banco": "Otras Instituciones",
-        "precio": "501.9376"
-    },
-    {
-        "banco": "Banco Mercantil",
-        "precio": "455.4080"
-    },
-    {
-        "banco": "BBVA Provincial",
-        "precio": "548.6447"
-    },
-    {
-        "banco": "Banco Nacional de Cr\u00e9dito BNC",
-        "precio": "502.4334"
-    },
-    {
-        "banco": "Banco Exterior",
-        "precio": "465.9819"
-    },
-    {
-        "banco": "Banesco",
-        "precio": "458.9315"
-    },
-    {
-        "banco": "Otras Instituciones",
-        "precio": "524.8509"
-    },
-    {
-        "banco": "BBVA Provincial",
-        "precio": "518.6748"
-    },
-    {
-        "banco": "Bancamiga",
-        "precio": "506.9812"
-    },
-    {
-        "banco": "Banesco",
-        "precio": "539.1861"
-    },
-    {
-        "banco": "Banco Mercantil",
-        "precio": "545.0000"
-    },
-    {
-        "banco": "Banco Nacional de Cr\u00e9dito BNC",
-        "precio": "483.8723"
-    },
-    {
-        "banco": "Otras Instituciones",
-        "precio": "488.6116"
-    },
-    {
-        "banco": "Bancamiga",
-        "precio": "513.2278"
-    }
-]"
+# --- CARGA DE DATOS ---
+# REEMPLAZA ESTE LINK con tu enlace RAW de GitHub
+URL_JSON = "https://raw.githubusercontent.com/TU_USUARIO/TU_REPO/main/bancos.json"
 
-@st.cache_data(ttl=600) # Esto hace que la app sea veloz y no cargue a cada rato
-def cargar_datos():
+@st.cache_data(ttl=3600) # Guarda los datos por 1 hora para que sea ultra rápido
+def obtener_tasas():
     try:
         response = requests.get(URL_JSON)
-        return response.json()
+        data = response.json()
+        return data
     except:
-        return []
+        return None
 
-datos = cargar_datos()
+datos = obtener_tasas()
 
 if datos:
-    # Creamos una lista de nombres de bancos para el selector
-    nombres_bancos = [item['banco'] for item in datos]
+    # 1. Crear la lista para el selector
+    # Usamos .encode().decode() para limpiar los acentos raros como \u00e9
+    opciones_bancos = {item['banco']: float(item['precio']) for item in datos}
     
-    # Selector de Banco
-    banco_seleccionado = st.selectbox("Selecciona el Banco:", nombres_bancos)
+    # 2. Interfaz de usuario
+    banco_elegido = st.selectbox("Selecciona la tasa del Banco:", list(opciones_bancos.keys()))
+    tasa_valor = opciones_bancos[banco_elegido]
     
-    # Buscar el precio del banco elegido
-    precio_dolar = 0
-    for item in datos:
-        if item['banco'] == banco_seleccionado:
-            precio_dolar = float(item['precio'])
-            break
-
-    st.info(f"Tasa seleccionada: **{precio_dolar} VES**")
-
-    # 3. La Calculadora
+    st.success(f"Tasa de hoy: **{tasa_valor:,.2f} VES**")
+    
+    st.write("---")
+    
+    # 3. Campos de cálculo
     col1, col2 = st.columns(2)
     
     with col1:
-        monto_usd = st.number_input("Monto en Dólares ($):", min_value=0.0, value=1.0)
+        usd = st.number_input("Monto en Dólares ($)", min_value=0.0, value=1.0, step=1.0)
     
     with col2:
-        resultado = monto_usd * precio_dolar
-        st.metric("Total en Bolívares (VES):", f"{resultado:,.2f}")
+        bolivares = usd * tasa_valor
+        st.metric("Total en Bolívares", f"{bolivares:,.2f} VES")
 
-    st.write("---")
-    st.caption("Datos actualizados automáticamente desde el BCV.")
+    st.info(f"💡 Multiplicando ${usd} x {tasa_valor}")
 
 else:
-    st.error("No se pudieron cargar los datos. Verifica el enlace de GitHub.")
+    st.error("⚠️ Error: No se pudo conectar con la base de datos de GitHub.")
+    st.info("Asegúrate de que el enlace RAW sea correcto y que el archivo bancos.json no esté vacío.")
+
+st.write("---")
+st.caption("Pedro Peres / El Aprendiz - 2026")
