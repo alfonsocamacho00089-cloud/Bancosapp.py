@@ -1,52 +1,54 @@
 import streamlit as st
 import requests
-import json
+import pandas as pd
 
-# Usamos la API que mejor replica el comportamiento de un humano
-def obtener_bancos_estilo_binance():
-    # Esta es la ruta que trae la tabla informativa del BCV (la de los 555)
-    url = "https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bcv"
-    
-    # Los headers de "Nivel Pro" que usaste con Binance
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
+# 1. Configuración de la página
+st.set_page_config(page_title="Calculadora TuPropina", page_icon="💰")
 
+st.title("💰 Calculadora TuPropina")
+st.subheader("Tasas Oficiales BCV en tiempo real")
+
+# 2. Tu enlace RAW de GitHub (PEGA EL TUYO AQUÍ)
+URL_JSON = "TU_ENLACE_RAW_AQUI"
+
+@st.cache_data(ttl=600) # Esto hace que la app sea veloz y no cargue a cada rato
+def cargar_datos():
     try:
-        # Petición limpia
-        response = requests.get(url, headers=headers, timeout=15)
-        
-        if response.status_code == 200:
-            data = response.json()
-            monitores = data.get('monitors', {})
-            
-            # Filtramos solo los bancos que tú quieres mostrar
-            bancos_interes = ["Mercantil", "Provincial", "BNC", "Banco de Venezuela"]
-            resultados = []
-            
-            for clave, info in monitores.items():
-                if any(b in info['title'] for b in bancos_interes):
-                    resultados.append({
-                        "banco": info['title'],
-                        "precio": info['price'],
-                        "update": info.get('last_update', 'Reciente')
-                    })
-            return resultados
-        return None
-    except Exception as e:
-        return f"Error de conexión: {e}"
+        response = requests.get(URL_JSON)
+        return response.json()
+    except:
+        return []
 
-# --- MOSTRAR EN TU APP ---
-st.subheader("🏦 Tasas Reales de Venta (Bancos)")
-data_bancos = obtener_bancos_estilo_binance()
+datos = cargar_datos()
 
-if isinstance(data_bancos, list) and len(data_bancos) > 0:
-    st.success("🔥 ¡Data del BCV quebrada con éxito!")
-    st.table(data_bancos)
-    # Guardamos el archivo para que tu Calculadora lo use
-    with open("bancos.json", "w") as f:
-        json.dump(data_bancos, f)
+if datos:
+    # Creamos una lista de nombres de bancos para el selector
+    nombres_bancos = [item['banco'] for item in datos]
+    
+    # Selector de Banco
+    banco_seleccionado = st.selectbox("Selecciona el Banco:", nombres_bancos)
+    
+    # Buscar el precio del banco elegido
+    precio_dolar = 0
+    for item in datos:
+        if item['banco'] == banco_seleccionado:
+            precio_dolar = float(item['precio'])
+            break
+
+    st.info(f"Tasa seleccionada: **{precio_dolar} VES**")
+
+    # 3. La Calculadora
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        monto_usd = st.number_input("Monto en Dólares ($):", min_value=0.0, value=1.0)
+    
+    with col2:
+        resultado = monto_usd * precio_dolar
+        st.metric("Total en Bolívares (VES):", f"{resultado:,.2f}")
+
+    st.write("---")
+    st.caption("Datos actualizados automáticamente desde el BCV.")
+
 else:
-    st.error("El BCV sigue resistiendo. Pero como tú dices: si pudimos con Binance, podemos con esto.")
+    st.error("No se pudieron cargar los datos. Verifica el enlace de GitHub.")
