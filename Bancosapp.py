@@ -1,36 +1,70 @@
 import streamlit as st
 import requests
+import datetime
 import json
 
-st.set_page_config(page_title="Radar de Bancos", page_icon="🏦")
-st.title("🏦 Radar de Tasas Bancarias")
+st.set_page_config(page_title="TuPropina P2P - Alto", page_icon="📡")
+st.title("📡 Antena TuPropina (USDT + Bancos)")
 
+# --- PARTE 1: BINANCE P2P (TU CÓDIGO) ---
+def obtener_p2p_alto():
+    st.cache_data.clear()
+    url = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search"
+    payload = {
+        "asset": "USDT",
+        "fiat": "VES",
+        "tradeType": "SELL", 
+        "bank": ["Banesco"],
+        "rows": 1,
+        "page": 1,
+        "publisherType":"merchant"
+    }
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Content-Type": "application/json"
+        }
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        if response.status_code == 200:
+            res_json = response.json()
+            return res_json['data'][0]['adv']['price']
+        return f"Error: {response.status_code}"
+    except Exception as e:
+        return f"Sin señal: {e}"
+
+precio_alto = obtener_p2p_alto()
+hora_actual = (datetime.datetime.now() - datetime.timedelta(hours=4)).strftime("%I:%M:%S %p")
+
+if "Error" in str(precio_alto) or "Sin" in str(precio_alto):
+    st.error(precio_alto)
+else:
+    st.success(f"### 🔥 PRECIO USDT: {precio_alto} Bs.")
+    st.code(f"VALOR_REAL|{precio_alto}|")
+    with open("tasa.txt", "w") as f:
+        f.write(str(precio_alto))
+
+st.divider()
+
+# --- PARTE 2: BANCOS (AÑADIDO AUTOMÁTICO) ---
 def obtener_bancos():
-    # Esta API es la mejor porque separa los bancos del resto
     url = "https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bancamiga"
     try:
         response = requests.get(url, timeout=10)
-        data = response.json()
-        return data['monitors']
-    except Exception as e:
-        st.error(f"Error de conexión: {e}")
+        if response.status_code == 200:
+            return response.json()['monitors']
+        return None
+    except:
         return None
 
-# Botón para forzar la actualización y el guardado en GitHub
-if st.button('🔄 Sincronizar Tasas de Bancos'):
-    with st.spinner('Buscando en las bóvedas...'):
-        bancos_data = obtener_bancos()
-        
-        if bancos_data:
-            # MAGIA: Guardamos el archivo que tu HTML va a leer
-            with open("bancos.json", "w") as f:
-                json.dump(bancos_data, f)
-            
-            st.success("✅ ¡Lista de Bancos actualizada y guardada!")
-            
-            # Mostramos la tabla para que verifiques los precios
-            st.dataframe(bancos_data)
-        else:
-            st.error("No se pudo recibir información. Intenta de nuevo.")
+st.subheader("🏦 Tasas de Bancos")
+bancos_data = obtener_bancos()
 
-st.info("Este radar genera el archivo 'bancos.json'. Tu App principal lo leerá desde ahí.")
+if bancos_data:
+    with open("bancos.json", "w") as f:
+        json.dump(bancos_data, f)
+    st.success("✅ Tasas de bancos sincronizadas")
+    st.dataframe(bancos_data)
+else:
+    st.warning("⚠️ No se pudo actualizar la lista de bancos (API ocupada)")
+
+st.write(f"🕒 **Última actualización:** {hora_actual}")
