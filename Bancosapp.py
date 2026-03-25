@@ -4,26 +4,30 @@ import json
 import datetime
 
 st.set_page_config(page_title="Radar Bancario Real", page_icon="🏦")
-st.title("🏦 Precios de Venta: Bancos (Real)")
+st.title("🏦 Tasa de Venta Real (Bancos)")
 
 def obtener_data_viva():
-    # Usamos el endpoint que agrupa los bancos de la tabla del BCV
+    # Esta URL nos sirve de puente para saltar el bloqueo del BCV
     url = "https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bcv"
     
+    # Usamos los headers que me pasaste para parecer un humano en Windows
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json"
+    }
+    
     try:
-        # Nos identificamos como un navegador normal
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url, headers=headers, timeout=10)
+        # En este caso usamos GET porque estamos pidiendo información, no enviándola
+        response = requests.get(url, headers=headers, timeout=15)
         
         if response.status_code == 200:
             monitores = response.json().get('monitors', {})
             
-            # Filtramos exactamente los que viste en tu captura
+            # Filtramos exactamente los bancos que viste en tu captura
             bancos_clave = ["Mercantil", "Provincial", "BNC", "Banco de Venezuela", "Banesco"]
             lista_final = []
             
             for clave, info in monitores.items():
-                # Si el banco está en nuestra lista, lo guardamos
                 if any(b in info['title'] for b in bancos_clave):
                     lista_final.append({
                         "banco": info['title'],
@@ -33,20 +37,20 @@ def obtener_data_viva():
             return lista_final
         return f"Error: {response.status_code}"
     except Exception as e:
-        return f"Sin conexión: {e}"
+        return f"Sin señal: {e}"
 
-# --- ACCIÓN ---
+# --- EJECUCIÓN ---
 data = obtener_data_viva()
 
 if isinstance(data, list) and len(data) > 0:
-    st.success("✅ ¡Data real obtenida!")
-    st.table(data) # Aquí verás los 555 o el que esté vigente
+    st.success("✅ ¡Data real obtenida con éxito!")
+    st.table(data) # Aquí deberían aparecer tus 555, 530, etc.
     
-    # Guardamos el JSON automático
+    # Guardamos el JSON para tu App
     with open("bancos.json", "w") as f:
         json.dump(data, f)
 else:
-    st.error("📡 El servidor del BCV está rechazando la conexión del robot.")
-    st.info("Pedro, si sale este error, es porque el BCV bloqueó la IP. No pierdas tiempo: en ese caso toca usar un 'Scraper' con proxy o esperar a que la API refresque.")
+    st.error("📡 El BCV sigue bloqueando la IP del servidor.")
+    st.info("Pedro, si después de este código sigue saliendo error, es porque el servidor de Streamlit está 'marcado'. En ese caso, la única forma de terminar hoy es dejar los datos de respaldo fijos para que tu App funcione.")
 
 st.write(f"🕒 Sincronizado: {datetime.datetime.now().strftime('%I:%M %p')}")
