@@ -3,45 +3,50 @@ import requests
 import datetime
 import json
 
-st.set_page_config(page_title="Tasas Oficiales", page_icon="🏦")
-st.title("🏦 Centro de Tasas TuPropina")
+st.set_page_config(page_title="Dólar Digital Bancario", page_icon="🏦")
+st.title("🏦 Tasa de Venta: Dólar Bancario")
 
-def obtener_binance():
-    url = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search"
-    payload = {"asset": "USDT", "fiat": "VES", "tradeType": "SELL", "bank": ["Banesco"], "rows": 1, "page": 1}
+def obtener_dolar_bancario():
+    st.cache_data.clear()
+    # Esta API nos da el precio al que los bancos VENDEN el dólar
+    url = "https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bcv"
+    
     try:
-        response = requests.post(url, json=payload, timeout=10)
-        return float(response.json()['data'][0]['adv']['price'])
-    except:
-        return None
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(url, headers=headers, timeout=15)
+        
+        if response.status_code == 200:
+            monitores = response.json().get('monitors', {})
+            # Filtramos para que solo veas los bancos que venden dólares digitales
+            bancos_interes = ["Banco de Venezuela", "Banesco", "Mercantil", "BBVA Provincial"]
+            
+            lista_filtrada = []
+            for clave, info in monitores.items():
+                if any(banco in info['title'] for banco in bancos_interes):
+                    lista_filtrada.append({
+                        "banco": info['title'],
+                        "precio": info['price'],
+                        "actualizado": info['last_update']
+                    })
+            return lista_filtrada
+        return f"Error: {response.status_code}"
+    except Exception as e:
+        return f"Sin señal: {e}"
 
-# --- LÓGICA DE NEGOCIO REAL ---
-usdt = obtener_binance()
-hora = (datetime.datetime.now() - datetime.timedelta(hours=4)).strftime("%I:%M %p")
+# Ejecución automática
+data_bancos = obtener_dolar_bancario()
+hora_actual = (datetime.datetime.now() - datetime.timedelta(hours=4)).strftime("%I:%M %p")
 
-if usdt:
-    # En Venezuela, el BCV suele estar por debajo. 
-    # Si no quieres inventar, simplemente muestra la brecha real.
-    tasa_bcv = round(usdt / 1.18, 2) # Este 1.18 es el promedio de brecha actual
+if isinstance(data_bancos, list) and len(data_bancos) > 0:
+    st.success(f"✅ Data de Dólar Digital obtenida ({hora_actual})")
     
-    # Creamos un JSON limpio que tu HTML usará para mostrar UNA SOLA TASA
-    # pero que sirve para todos los bancos.
-    data_final = {
-        "bcv": tasa_bcv,
-        "usdt": usdt,
-        "fecha": (datetime.datetime.now()).strftime("%d/%m/%Y")
-    }
-
+    # Mostramos la tabla con los precios de venta (tipo 51.50 como dijiste)
+    st.table(data_bancos)
+    
+    # Guardamos el JSON para que tu App lo use
     with open("bancos.json", "w") as f:
-        json.dump(data_final, f)
-
-    st.success(f"✅ Sincronización Exitosa - {hora}")
-    
-    # Diseño limpio para que tú lo veas
-    col1, col2 = st.columns(2)
-    col1.metric("BCV (Oficial)", f"{tasa_bcv} Bs.")
-    col2.metric("P2P (Binance)", f"{usdt} Bs.")
-    
-    st.info("💡 Todos los bancos en Venezuela usan la tasa BCV. Esta es la que verán tus usuarios.")
+        json.dump(data_bancos, f)
 else:
-    st.error("📡 Buscando señal...")
+    st.error("No se pudo conectar con la tasa bancaria. Reintentando...")
+
+st.info("Esta es la tasa oficial de venta en los portales bancarios para cuentas custodia.")
