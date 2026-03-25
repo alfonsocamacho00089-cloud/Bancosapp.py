@@ -1,56 +1,52 @@
 import streamlit as st
 import requests
 import json
-import datetime
 
-st.set_page_config(page_title="Radar Bancario Real", page_icon="🏦")
-st.title("🏦 Tasa de Venta Real (Bancos)")
-
-def obtener_data_viva():
-    # Esta URL nos sirve de puente para saltar el bloqueo del BCV
+# Usamos la API que mejor replica el comportamiento de un humano
+def obtener_bancos_estilo_binance():
+    # Esta es la ruta que trae la tabla informativa del BCV (la de los 555)
     url = "https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bcv"
     
-    # Usamos los headers que me pasaste para parecer un humano en Windows
+    # Los headers de "Nivel Pro" que usaste con Binance
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
     }
-    
+
     try:
-        # En este caso usamos GET porque estamos pidiendo información, no enviándola
+        # Petición limpia
         response = requests.get(url, headers=headers, timeout=15)
         
         if response.status_code == 200:
-            monitores = response.json().get('monitors', {})
+            data = response.json()
+            monitores = data.get('monitors', {})
             
-            # Filtramos exactamente los bancos que viste en tu captura
-            bancos_clave = ["Mercantil", "Provincial", "BNC", "Banco de Venezuela", "Banesco"]
-            lista_final = []
+            # Filtramos solo los bancos que tú quieres mostrar
+            bancos_interes = ["Mercantil", "Provincial", "BNC", "Banco de Venezuela"]
+            resultados = []
             
             for clave, info in monitores.items():
-                if any(b in info['title'] for b in bancos_clave):
-                    lista_final.append({
+                if any(b in info['title'] for b in bancos_interes):
+                    resultados.append({
                         "banco": info['title'],
                         "precio": info['price'],
-                        "actualizado": info.get('last_update', 'Hoy')
+                        "update": info.get('last_update', 'Reciente')
                     })
-            return lista_final
-        return f"Error: {response.status_code}"
+            return resultados
+        return None
     except Exception as e:
-        return f"Sin señal: {e}"
+        return f"Error de conexión: {e}"
 
-# --- EJECUCIÓN ---
-data = obtener_data_viva()
+# --- MOSTRAR EN TU APP ---
+st.subheader("🏦 Tasas Reales de Venta (Bancos)")
+data_bancos = obtener_bancos_estilo_binance()
 
-if isinstance(data, list) and len(data) > 0:
-    st.success("✅ ¡Data real obtenida con éxito!")
-    st.table(data) # Aquí deberían aparecer tus 555, 530, etc.
-    
-    # Guardamos el JSON para tu App
+if isinstance(data_bancos, list) and len(data_bancos) > 0:
+    st.success("🔥 ¡Data del BCV quebrada con éxito!")
+    st.table(data_bancos)
+    # Guardamos el archivo para que tu Calculadora lo use
     with open("bancos.json", "w") as f:
-        json.dump(data, f)
+        json.dump(data_bancos, f)
 else:
-    st.error("📡 El BCV sigue bloqueando la IP del servidor.")
-    st.info("Pedro, si después de este código sigue saliendo error, es porque el servidor de Streamlit está 'marcado'. En ese caso, la única forma de terminar hoy es dejar los datos de respaldo fijos para que tu App funcione.")
-
-st.write(f"🕒 Sincronizado: {datetime.datetime.now().strftime('%I:%M %p')}")
+    st.error("El BCV sigue resistiendo. Pero como tú dices: si pudimos con Binance, podemos con esto.")
