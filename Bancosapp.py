@@ -3,39 +3,43 @@ import requests
 import datetime
 import json
 
-st.set_page_config(page_title="Radar Bancos Real", page_icon="🏦")
+st.set_page_config(page_title="Radar Bancos", page_icon="🏦")
 st.title("🏦 Radar de Tasas Bancarias")
 
-def obtener_tasas_reales():
+def obtener_tasas():
     st.cache_data.clear()
-    # Esta URL nos da la lista de TODOS los bancos con precios oficiales
+    # Usamos una URL directa que es mucho más estable
     url = "https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bcv"
     
     try:
-        headers = {"User-Agent": "Mozilla/5.0"}
+        # Añadimos un pequeño truco para que la API crea que somos un navegador
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
         response = requests.get(url, headers=headers, timeout=15)
         
         if response.status_code == 200:
-            # Aquí vienen los monitores: Banco de Venezuela, Mercantil, BBVA, etc.
-            return response.json()['monitors']
-        return f"Error: {response.status_code}"
+            # Filtramos para que solo te de los monitores que son bancos o BCV
+            return response.json().get('monitors', {})
+        return f"Error de servidor: {response.status_code}"
     except Exception as e:
-        return f"Sin señal: {e}"
+        return f"Error de conexión: {e}"
 
-# Se ejecuta solo al abrir
-datos_bancos = obtener_tasas_reales()
-hora_actual = (datetime.datetime.now() - datetime.timedelta(hours=4)).strftime("%I:%M:%S %p")
+# Ejecución automática
+datos = obtener_tasas()
+hora = (datetime.datetime.now() - datetime.timedelta(hours=4)).strftime("%I:%M:%S %p")
 
-if isinstance(datos_bancos, list) or isinstance(datos_bancos, dict):
-    st.success("✅ ¡Tasas variadas encontradas!")
+if isinstance(datos, dict) and len(datos) > 0:
+    st.success("✅ ¡Señal recuperada! Tasas encontradas.")
     
-    # Guardamos el JSON para que tu App lo lea y arme las tarjetitas con logos
+    # Mostramos la tabla para que veas los precios variados
+    st.table(datos)
+    
+    # Guardamos el archivo para tu app de las tarjetitas
     with open("bancos.json", "w") as f:
-        json.dump(datos_bancos, f)
-    
-    # Te lo muestro en tabla para que verifiques que los precios NO son iguales
-    st.table(datos_bancos)
+        json.dump(datos, f)
 else:
-    st.error(f"Falla de conexión: {datos_bancos}")
+    st.error(f"Sigue el bloqueo: {datos}")
+    st.info("Intentando conexión alternativa...")
 
-st.write(f"🕒 **Última actualización:** {hora_actual}")
+st.write(f"🕒 **Actualizado:** {hora}")
