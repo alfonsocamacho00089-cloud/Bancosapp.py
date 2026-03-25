@@ -9,7 +9,108 @@ st.title("💰 Calculadora TuPropina")
 st.subheader("Tasas Oficiales BCV en tiempo real")
 
 # 2. Tu enlace RAW de GitHub (PEGA EL TUYO AQUÍ)
-URL_JSON = "TU_ENLACE_RAW_AQUI"
+URL_JSON = "[
+    {
+        "banco": "Banco Nacional de Cr\u00e9dito BNC",
+        "precio": "494.9658"
+    },
+    {
+        "banco": "BBVA Provincial",
+        "precio": "530.0000"
+    },
+    {
+        "banco": "Banco Activo",
+        "precio": "463.5795"
+    },
+    {
+        "banco": "Banco Mercantil",
+        "precio": "555.0000"
+    },
+    {
+        "banco": "Banesco",
+        "precio": "469.2704"
+    },
+    {
+        "banco": "Otras Instituciones",
+        "precio": "508.9179"
+    },
+    {
+        "banco": "Banco Nacional de Cr\u00e9dito BNC",
+        "precio": "498.9911"
+    },
+    {
+        "banco": "Bancamiga",
+        "precio": "524.8302"
+    },
+    {
+        "banco": "Banesco",
+        "precio": "469.1294"
+    },
+    {
+        "banco": "Banco Venezolano de Cr\u00e9dito",
+        "precio": "561.0000"
+    },
+    {
+        "banco": "BBVA Provincial",
+        "precio": "516.0646"
+    },
+    {
+        "banco": "Otras Instituciones",
+        "precio": "501.9376"
+    },
+    {
+        "banco": "Banco Mercantil",
+        "precio": "455.4080"
+    },
+    {
+        "banco": "BBVA Provincial",
+        "precio": "548.6447"
+    },
+    {
+        "banco": "Banco Nacional de Cr\u00e9dito BNC",
+        "precio": "502.4334"
+    },
+    {
+        "banco": "Banco Exterior",
+        "precio": "465.9819"
+    },
+    {
+        "banco": "Banesco",
+        "precio": "458.9315"
+    },
+    {
+        "banco": "Otras Instituciones",
+        "precio": "524.8509"
+    },
+    {
+        "banco": "BBVA Provincial",
+        "precio": "518.6748"
+    },
+    {
+        "banco": "Bancamiga",
+        "precio": "506.9812"
+    },
+    {
+        "banco": "Banesco",
+        "precio": "539.1861"
+    },
+    {
+        "banco": "Banco Mercantil",
+        "precio": "545.0000"
+    },
+    {
+        "banco": "Banco Nacional de Cr\u00e9dito BNC",
+        "precio": "483.8723"
+    },
+    {
+        "banco": "Otras Instituciones",
+        "precio": "488.6116"
+    },
+    {
+        "banco": "Bancamiga",
+        "precio": "513.2278"
+    }
+]"
 
 @st.cache_data(ttl=600) # Esto hace que la app sea veloz y no cargue a cada rato
 def cargar_datos():
