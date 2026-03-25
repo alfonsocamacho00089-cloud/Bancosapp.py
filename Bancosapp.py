@@ -3,47 +3,40 @@ import requests
 import datetime
 import json
 
-st.set_page_config(page_title="Radar de Bancos", page_icon="🏦")
-st.title("🏦 Radar de Tasas Bancarias")
+st.set_page_config(page_title="Radar Bancos P2P", page_icon="🏦")
+st.title("🏦 Radar de Bancos (Vía Binance)")
 
-def obtener_tasas_bancos():
-    # Limpiamos caché para que siempre sea data fresca
-    st.cache_data.clear()
-    
-    # URL de la API que agrupa los bancos
-    url = "https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bancamiga"
-    
+def obtener_tasa_por_banco(nombre_banco):
+    url = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search"
+    payload = {
+        "asset": "USDT", "fiat": "VES", "tradeType": "SELL", 
+        "bank": [nombre_banco], "rows": 1, "page": 1, "publisherType": "merchant"
+    }
     try:
-        # Usamos tus mismos headers para que no nos bloqueen
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Content-Type": "application/json"
-        }
-        
-        response = requests.get(url, headers=headers, timeout=15)
-        
+        headers = {"User-Agent": "Mozilla/5.0", "Content-Type": "application/json"}
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
         if response.status_code == 200:
-            res_json = response.json()
-            return res_json['monitors']
-        return f"Error: {response.status_code}"
-    except Exception as e:
-        return f"Sin señal: {e}"
+            return response.json()['data'][0]['adv']['price']
+        return "Error"
+    except:
+        return "N/A"
 
-# Se ejecuta automáticamente al cargar
-bancos_data = obtener_tasas_bancos()
+# --- LISTA DE BANCOS QUE QUEREMOS ---
+bancos_a_buscar = ["Banesco", "Mercantil", "BBVA Provincial", "Banco de Venezuela"]
+resultados = {}
+
+st.info("Buscando tasas en tiempo real...")
+
+for b in bancos_a_buscar:
+    precio = obtener_tasa_por_banco(b)
+    resultados[b] = {"title": b, "price": precio}
+
+# --- GUARDADO AUTOMÁTICO ---
+with open("bancos.json", "w") as f:
+    json.dump(resultados, f)
+
+st.success("✅ Tasas de Binance sincronizadas")
+st.table(resultados) # Para que veas los precios claritos
+
 hora_actual = (datetime.datetime.now() - datetime.timedelta(hours=4)).strftime("%I:%M:%S %p")
-
-if isinstance(bancos_data, str): # Si es un error (string)
-    st.error(bancos_data)
-else:
-    # Mostramos éxito y guardamos el archivo JSON para tu HTML
-    st.success(f"### ✅ TASAS SINCRONIZADAS AUTOMÁTICAMENTE")
-    st.dataframe(bancos_data)
-    
-    # Guardamos en GitHub para que tu App HTML lo lea
-    with open("bancos.json", "w") as f:
-        json.dump(bancos_data, f)
-    
-    st.info("El archivo 'bancos.json' ha sido actualizado en el repositorio.")
-
 st.write(f"🕒 **Última actualización:** {hora_actual}")
