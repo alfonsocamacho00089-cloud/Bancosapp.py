@@ -9,8 +9,7 @@ st.write("Tasas oficiales actualizadas directamente del BCV.")
 
 # --- CARGA DE DATOS ---
 # REEMPLAZA ESTE LINK con tu enlace RAW de GitHub
-URL_JSON = "https://raw.githubusercontent.com/TU_USUARIO/TU_REPO/main/bancos.json"
-
+URL_JSON = "https://raw.githubusercontent.com/alfonsocamacho00089-cloud/captura_bcv.py/main/bancos.json"
 @st.cache_data(ttl=3600) # Guarda los datos por 1 hora para que sea ultra rápido
 def obtener_tasas():
     try:
