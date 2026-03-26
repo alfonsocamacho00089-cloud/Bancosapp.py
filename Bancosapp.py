@@ -1,54 +1,65 @@
 import streamlit as st
 import requests
+import datetime
 
-# Configuración visual
-st.set_page_config(page_title="Calculadora TuPropina", page_icon="🇻🇪")
+st.set_page_config(page_title="Antena Bit-Yadio", page_icon="📡")
+st.title("📡 Antena: Señal Bit & Yadio")
 
-st.title("💰 Calculadora TuPropina")
-st.write("Tasas oficiales actualizadas directamente del BCV.")
+# --- FUNCIONES DE SEÑAL ---
 
-# --- CARGA DE DATOS ---
-# REEMPLAZA ESTE LINK con tu enlace RAW de GitHub
-URL_JSON = "https://raw.githubusercontent.com/alfonsocamacho00089-cloud/captura_bcv.py/main/bancos.json"
-@st.cache_data(ttl=3600) # Guarda los datos por 1 hora para que sea ultra rápido
-def obtener_tasas():
+def obtener_yadio():
+    """ Obtiene el precio de Yadio.io (Muy estable) """
     try:
-        response = requests.get(URL_JSON)
-        data = response.json()
-        return data
+        # Usamos el endpoint específico para USDT
+        url = "https://api.yadio.io/json/USDT"
+        headers = {"User-Agent": "Mozilla/5.0"} 
+        res = requests.get(url, headers=headers, timeout=10)
+        if res.status_code == 200:
+            return res.json()['USDT']['price']
+        return "Error Yadio"
     except:
-        return None
+        return "Sin señal Yadio"
 
-datos = obtener_tasas()
+def obtener_bit():
+    """ Obtiene el precio de BitYadio """
+    try:
+        # Endpoint de ticker para el último precio
+        url = "https://api.bityadio.com/v1/ticker/usdtves"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        res = requests.get(url, headers=headers, timeout=10)
+        if res.status_code == 200:
+            # Asumiendo que la respuesta es un JSON con 'last_price'
+            return res.json()['last_price']
+        return "Error Bit"
+    except:
+        return "Sin señal Bit"
 
-if datos:
-    # 1. Crear la lista para el selector
-    # Usamos .encode().decode() para limpiar los acentos raros como \u00e9
-    opciones_bancos = {item['banco']: float(item['precio']) for item in datos}
-    
-    # 2. Interfaz de usuario
-    banco_elegido = st.selectbox("Selecciona la tasa del Banco:", list(opciones_bancos.keys()))
-    tasa_valor = opciones_bancos[banco_elegido]
-    
-    st.success(f"Tasa de hoy: **{tasa_valor:,.2f} VES**")
-    
-    st.write("---")
-    
-    # 3. Campos de cálculo
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        usd = st.number_input("Monto en Dólares ($)", min_value=0.0, value=1.0, step=1.0)
-    
-    with col2:
-        bolivares = usd * tasa_valor
-        st.metric("Total en Bolívares", f"{bolivares:,.2f} VES")
+# --- EJECUCIÓN Y PANTALLA ---
 
-    st.info(f"💡 Multiplicando ${usd} x {tasa_valor}")
+# Traemos los datos
+tasa_yadio = obtener_yadio()
+tasa_bit = obtener_bit()
 
-else:
-    st.error("⚠️ Error: No se pudo conectar con la base de datos de GitHub.")
-    st.info("Asegúrate de que el enlace RAW sea correcto y que el archivo bancos.json no esté vacío.")
+hora_actual = (datetime.datetime.now() - datetime.timedelta(hours=4)).strftime("%I:%M:%S %p")
 
-st.write("---")
-st.caption("Pedro Peres / El Aprendiz - 2026")
+# Diseño de la Antena en Streamlit
+col1, col2 = st.columns(2)
+
+with col1:
+    st.metric(label="📍 Yadio (USDT)", value=f"{tasa_yadio} Bs")
+    
+with col2:
+    st.metric(label="🪙 BitYadio", value=f"{tasa_bit} Bs")
+
+# --- GUARDADO PARA TU CALCULADORA ---
+# Formato compatible: YADIO|BIT
+info_txt = f"{tasa_yadio}|{tasa_bit}"
+
+try:
+    with open("tasa.txt", "w") as f:
+        f.write(info_txt)
+    st.success(f"✅ Señal enviada a GitHub: `{info_txt}`")
+except Exception as e:
+    st.error(f"Fallo al guardar: {e}")
+
+st.write(f"🕒 **Sincronizado a las:** {hora_actual}")
